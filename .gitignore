@@ -1,0 +1,8 @@
+.vscode
+.ipynb_checkpoints
+all-the-news
+nytimes
+electronics
+training_checkpoints
+training_checkpoints_2
+*.h5
