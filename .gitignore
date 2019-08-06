@@ -7,3 +7,6 @@ training_checkpoints
 training_checkpoints_2
 *.h5
 all-the-news.zip
+bin
+obj
+.vs
