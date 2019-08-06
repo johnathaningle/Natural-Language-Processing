@@ -39,14 +39,28 @@ def write_formatted_csv(article_list):
         for article in article_list:
             writer.writerow(article)
 
+
 #convert corpus into one string
+print("Cleaning text...")
 articles = [clean_text(x) for x in articles if type(x) is str]
+print("Joining all articles into a single string")
 corpus = " ".join(articles)
-vocab = sorted(set(corpus))
+
 
 # Creating a mapping from unique characters to indices
+print("Creating character mappings")
+vocab = sorted(set(corpus))
 char2idx = {u:i for i, u in enumerate(vocab)}
 idx2char = np.array(vocab)
+
+#output the character mappings so that the "output.py" program doesn't need to go through all the articles
+df = pd.DataFrame.from_dict(char2idx, orient="index")
+df.to_csv("char2idx.csv", header=False)
+df = pd.DataFrame(vocab)
+df.to_csv("vocab.csv", header=False)
+
+#Convert the corpus into something that an ml algo can handle
+print("Converting text to numerical values")
 text_as_int = np.array([char2idx[c] for c in corpus], dtype=np.uint8)
 
 print(f"{corpus[:10]} - {text_as_int[:10]}")
@@ -76,6 +90,7 @@ BATCH_SIZE = 64
 # it maintains a buffer in which it shuffles elements).
 BUFFER_SIZE = 10000
 
+print("Shuffling data based on a BATCH SIZE of: ", BATCH_SIZE)
 dataset = dataset.shuffle(BUFFER_SIZE).batch(BATCH_SIZE, drop_remainder=True)
 
 # Length of the vocabulary in chars
@@ -89,14 +104,10 @@ rnn_units = 1024
 
 def build_model(vocab_size, embedding_dim, rnn_units, batch_size):
     model = tf.keras.Sequential([
-    tf.keras.layers.Embedding(vocab_size, embedding_dim,
-                              batch_input_shape=[batch_size, None]),
-    tf.keras.layers.CuDNNLSTM(rnn_units,
-                        return_sequences=True,
-                        stateful=True,
-                        recurrent_initializer='glorot_uniform'),
-    tf.keras.layers.Dense(vocab_size)
-  ])
+              tf.keras.layers.Embedding(vocab_size, embedding_dim, batch_input_shape=[batch_size, None]),
+              tf.keras.layers.CuDNNLSTM(rnn_units, return_sequences=True, stateful=True, recurrent_initializer='glorot_uniform'),
+              tf.keras.layers.Dense(vocab_size)
+    ])
     return model
 
 model = build_model(
