@@ -18,54 +18,19 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
 
-path = "./all-the-news"
-df = pd.DataFrame()
-for file in os.listdir(path):
-    if file != "formatted.csv":
-        print(path+"/"+file)
-        dfnew = pd.read_csv(path+"/"+file)
-        df = pd.concat([df, dfnew])
-articles = df["content"].to_numpy()
 
-def clean_text(txt):
-    txt = txt.encode("utf8").decode("ascii",'ignore')
-    txt = re.sub(' +',' ', txt)
-    txt = txt.replace("\t", "").replace("\r", "")
-    return txt 
 
-def write_formatted_csv(article_list):
-    with open(path+"/formatted.csv", mode="w", newline=None) as outfile:
-        writer = csv.writer(outfile)
-        for article in article_list:
-            writer.writerow(article)
-
-#convert corpus into one string
-articles = [clean_text(x) for x in articles if type(x) is str]
-corpus = " ".join(articles)
-vocab = sorted(set(corpus))
+idx2char = pd.read_csv("vocab.csv", header=None)
+idx2char = idx2char.to_numpy()
+vocab = vocab = [x[1] for x in idx2char]
 
 # Creating a mapping from unique characters to indices
-char2idx = {u:i for i, u in enumerate(vocab)}
-idx2char = np.array(vocab)
-text_as_int = np.array([char2idx[c] for c in corpus], dtype=np.uint8)
+char2idx = pd.read_csv("char2idx.csv", header=None)
+char2idx = char2idx[0].to_dict()
 
-print(f"{corpus[:10]} - {text_as_int[:10]}")
 
 # The maximum length sentence we want for a single input in characters
 seq_length = 100
-examples_per_epoch = len(corpus)//seq_length
-
-# Create training examples / targets
-char_dataset = tf.data.Dataset.from_tensor_slices(text_as_int)
-
-sequences = char_dataset.batch(seq_length+1, drop_remainder=True)
-
-def split_input_target(chunk):
-    input_text = chunk[:-1]
-    target_text = chunk[1:]
-    return input_text, target_text
-
-dataset = sequences.map(split_input_target)
 
 # Batch size
 BATCH_SIZE = 64
@@ -75,8 +40,6 @@ BATCH_SIZE = 64
 # so it doesn't attempt to shuffle the entire sequence in memory. Instead,
 # it maintains a buffer in which it shuffles elements).
 BUFFER_SIZE = 10000
-
-dataset = dataset.shuffle(BUFFER_SIZE).batch(BATCH_SIZE, drop_remainder=True)
 
 # Length of the vocabulary in chars
 vocab_size = len(vocab)
@@ -107,20 +70,10 @@ model = build_model(
 
 print(model.summary())
 
-for input_example_batch, target_example_batch in dataset.take(1):
-    example_batch_predictions = model(input_example_batch)
-    print(example_batch_predictions.shape, "# (batch_size, sequence_length, vocab_size)")
-
-sampled_indices = tf.random.categorical(example_batch_predictions[0], num_samples=1)
-sampled_indices = tf.squeeze(sampled_indices,axis=-1).numpy()
-
 
 def loss(labels, logits):
     return tf.keras.losses.sparse_categorical_crossentropy(labels, logits, from_logits=True)
 
-example_batch_loss  = loss(target_example_batch, example_batch_predictions)
-print("Prediction shape: ", example_batch_predictions.shape, " # (batch_size, sequence_length, vocab_size)")
-print("scalar_loss:      ", example_batch_loss.numpy().mean())
 
 model.compile(optimizer='adam', loss=loss)
 
@@ -131,7 +84,7 @@ checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt_{epoch}")
 
 checkpoint_callback=tf.keras.callbacks.ModelCheckpoint(
     filepath=checkpoint_prefix,
-    save_weights_only=True)
+    save_weights_only=False)
 
 model = build_model(vocab_size, embedding_dim, rnn_units, batch_size=1)
 
