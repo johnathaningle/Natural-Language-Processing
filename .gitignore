@@ -10,3 +10,4 @@ all-the-news.zip
 bin
 obj
 .vs
+.ionide
