@@ -21,12 +21,19 @@ namespace MLCsharp
         }
         public static List<string> getVocab(string baseDir)
         {
-            return new List<string>();
+            var retval = new List<string>();
+            var path = Path.Combine(baseDir, "MLPython\\vocab.csv");
+            var vocab = Frame.ReadCsv(path, hasHeaders: false);
+            foreach(var val in vocab.Rows.Values) {
+                retval.Add((string)val.GetAt(1));
+            }
+            return retval;
         }
         static void Main(string[] args)
         {
             var root = Directory.GetCurrentDirectory().Replace("\\MLCsharp", "").Replace("bin\\Debug\\netcoreapp2.2", "");
             var char2idx = getCharToIdx(root);
+            var vocab = getVocab(root);
         }
     }
 }
