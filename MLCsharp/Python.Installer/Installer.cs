@@ -6,23 +6,21 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Python;
 using Python.Runtime;
 
 namespace MLCsharp.Python.Installer
 {
     public class Installer
     {
-        public Installer(string rootDir)
-        {
-            RootPath = rootDir;
-        }
-        public string RootPath { get; set; }
         public const string EMBEDDED_PYTHON = "python-3.6.1-embed-amd64";
-        public const string PYTHON_VERSION = "python37";
+        public const string PYTHON_VERSION = "python36";
         public async Task SetupPython(bool force = false)
         {
             if (!PythonEnv.DeployEmbeddedPython)
                 return;
+            if (Runtime.pyversion != "3.6")
+                throw new InvalidOperationException("You must compile Python.Runtime with PYTHON36 flag! Runtime version: " + Runtime.pyversion);
             Environment.SetEnvironmentVariable("PATH", $"{EmbeddedPythonHome};" + Environment.GetEnvironmentVariable("PATH"));
             if (!force && Directory.Exists(EmbeddedPythonHome) && File.Exists(Path.Combine(EmbeddedPythonHome, "python.exe"))) // python seems installed, so exit
                 return;
@@ -48,8 +46,8 @@ namespace MLCsharp.Python.Installer
         {
             if (force || !File.Exists(filePath))
             {
-                var key = GetResourceKey(resourceName);
-                using (var stream = new FileStream(key, FileMode.Open))
+                var key = GetResourceKey(assembly, resourceName);
+                using (Stream stream = assembly.GetManifestResourceStream(key))
                 using (var file = new FileStream(filePath, FileMode.Create))
                 {
                     if (stream == null)
@@ -63,12 +61,12 @@ namespace MLCsharp.Python.Installer
         /// Install a python library (.whl file) in the embedded python installation of Python.Included
         /// </summary>
         /// <param name="assembly">The assembly containing the embedded wheel</param>
-        /// <param name="resource_name">Name of the embedded wheel file i.e. "numpy-1.16.3-cp37-cp37m-win_amd64.whl"</param>
+        /// <param name="resource_name">Name of the embedded wheel file i.e. "numpy-1.16.3-cp36-cp36m-win_amd64.whl"</param>
         /// <param name="force"></param>
         /// <returns></returns>
         public async Task InstallWheel(Assembly assembly, string resource_name, bool force = false)
         {
-            var key = GetResourceKey(resource_name);
+            var key = GetResourceKey(assembly, resource_name);
             if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentException($"The resource '{resource_name}' was not found in assembly '{assembly.FullName}'");
             var module_name = resource_name.Split('-').FirstOrDefault();
@@ -103,15 +101,15 @@ namespace MLCsharp.Python.Installer
         {
             get
             {
-                var appdata = RootPath + "MLCsharp\\Python.Installer\\Resources\\";
+                var appdata = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
                 var install_dir = Path.Combine(appdata, EMBEDDED_PYTHON);
                 return install_dir;
             }
         }
 
-        public string GetResourceKey(string embedded_file)
+        public string GetResourceKey(Assembly assembly, string embedded_file)
         {
-            return RootPath + "MLCsharp\\Python.Installer\\Resources\\" + embedded_file;
+            return assembly.GetManifestResourceNames().FirstOrDefault(x => x.Contains(embedded_file));
         }
     }
 }
