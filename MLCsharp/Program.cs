@@ -9,7 +9,7 @@ namespace MLCsharp
     {
         static void Main(string[] args)
         {
-            var dafService = new BiDafService();
+            var dafService = new BiDafService("The brown fox jumped over the fence.", "What color is the fox?");
             dafService.Execute();
         }
        
