@@ -35,7 +35,7 @@ nbconvert==5.5.0
 nbformat==4.4.0
 nltk==3.4.4
 notebook==6.0.0
-numpy==1.16.4
+numpy==1.22.0
 onnx==1.5.0
 onnxconverter-common==1.5.2
 onnxruntime==0.5.0
